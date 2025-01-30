@@ -1,0 +1,13 @@
+yfinance
+fastai
+torch
+hmmlearn
+scipy
+numpy
+pandas
+python-dotenv
+alpaca-trade-api
+schedule
+loguru
+certifi>=2023.7.22
+requests>=2.31.0
