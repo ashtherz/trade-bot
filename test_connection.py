@@ -2,73 +2,64 @@ from config.settings import ALPACA_API_KEY, ALPACA_SECRET_KEY
 from alpaca_trade_api import REST
 import sys
 import requests
-from urllib3.exceptions import InsecureRequestWarning
-import warnings
-import os
-
-# Debug: Print environment variables
-print("Environment variables:")
-print(f"APCA_API_KEY_ID: {os.getenv('APCA_API_KEY_ID')}")
-print(f"APCA_API_SECRET_KEY: {os.getenv('APCA_API_SECRET_KEY')}")
-
-# Suppress SSL verification warnings
-warnings.filterwarnings('ignore', category=InsecureRequestWarning)
-requests.packages.urllib3.disable_warnings()
+import json
 
 def test_connection():
     try:
-        # Create a session with SSL verification disabled
-        session = requests.Session()
-        session.verify = False
-        
-        # Add headers for debugging
+        # Create headers for direct API request
         headers = {
             'APCA-API-KEY-ID': ALPACA_API_KEY,
-            'APCA-API-SECRET-KEY': ALPACA_SECRET_KEY
+            'APCA-API-SECRET-KEY': ALPACA_SECRET_KEY,
+            'User-Agent': 'Mozilla/5.0',  # Add user agent
+            'Accept': 'application/json'   # Explicitly request JSON
         }
         
-        # Try a direct request first
-        response = session.get(
-            'https://paper-api.alpaca.markets/v2/account',
+        # Try direct request first
+        base_url = 'https://paper-api.alpaca.markets/v2'
+        response = requests.get(
+            f'{base_url}/account',
             headers=headers,
-            verify=False
+            verify=True  # Enable SSL verification
         )
         
-        print("\nDirect API Response:")
+        print("\nAPI Response Details:")
         print(f"Status Code: {response.status_code}")
-        print(f"Response Headers: {response.headers}")
-        print(f"Response Content: {response.text}")
+        print(f"Response Headers: {dict(response.headers)}")
+        print(f"Raw Response: {response.text[:1000]}")  # Print first 1000 chars
         
-        # Now try with the REST client
-        api = REST(
-            key_id=ALPACA_API_KEY,
-            secret_key=ALPACA_SECRET_KEY,
-            base_url='https://paper-api.alpaca.markets',
-            api_version='v2'
-        )
-        api._session = session
+        if response.status_code == 200:
+            account_data = response.json()
+            print("\nConnection successful!")
+            print(f"Account ID: {account_data.get('id')}")
+            print(f"Status: {account_data.get('status')}")
+            print(f"Buying Power: ${account_data.get('buying_power')}")
+        else:
+            print(f"\nError: Received status code {response.status_code}")
+            print("Response:", response.text)
+            
+    except requests.exceptions.SSLError as e:
+        print("\nSSL Error occurred. Try these fixes:")
+        print("1. Update your certificates:")
+        print("   cd /Applications/Python\\ 3.11/")
+        print("   ./Install\\ Certificates.command")
+        print("2. Or use a different endpoint")
+        print(f"\nError details: {e}")
         
-        print("\nTesting connection with:")
-        print(f"API Key: {ALPACA_API_KEY[:4]}...{ALPACA_API_KEY[-4:] if ALPACA_API_KEY else 'None'}")
-        print(f"Secret Key: {ALPACA_SECRET_KEY[:4]}...{ALPACA_SECRET_KEY[-4:] if ALPACA_SECRET_KEY else 'None'}")
-        print(f"Base URL: {api._base_url}")
-        
-        account = api.get_account()
-        print("\nConnection successful!")
-        print(f"Account data: {account}")
     except Exception as e:
         print(f"\nError: {e}")
         print("\nTroubleshooting steps:")
-        print("1. Verify API keys in .env file")
-        print("2. Check if .env file is in the correct location")
-        print("3. Ensure you're using paper trading keys")
-        print("4. Try restarting your Python session")
+        print("1. Check if you're behind a VPN or proxy")
+        print("2. Verify your internet connection")
+        print("3. Ensure API keys are correct")
+        print("4. Try using a different network")
         
-        # Print the full error traceback for debugging
         import traceback
         print("\nFull error traceback:")
         print(traceback.format_exc())
         sys.exit(1)
 
 if __name__ == "__main__":
+    print("Testing Alpaca API connection...")
+    print(f"API Key: {ALPACA_API_KEY[:4]}...{ALPACA_API_KEY[-4:] if ALPACA_API_KEY else 'None'}")
+    print(f"Secret Key: {ALPACA_SECRET_KEY[:4]}...{ALPACA_SECRET_KEY[-4:] if ALPACA_SECRET_KEY else 'None'}")
     test_connection() 
